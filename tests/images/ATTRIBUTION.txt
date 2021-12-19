@@ -1,0 +1,25 @@
+Test Images:
+
+kodim23.png (macaws.png), kodim24.png (house.png)
+========
+Images by the Eastman Kodak Company. Probably released for unrestricted use.
+See http://r0k.us/graphics/kodak/ for more information.
+
+wikipedia.png
+========
+Screenshot of https://en.wikipedia.org on 2021-12-17.
+
+duckduckgo.png
+========
+Screenshot of https://start.duckduckgo.com on 2021-12-17.
+
+terrazzo_diffuse.png, terrazzo_displacement.png, terrazzo_normal.png,
+terrazzo_roughness.png
+========
+Material textures from https://ambientcg.com/view?id=Terrazzo013. Licenced
+under CC0 1.0 avaliable at https://creativecommons.org/publicdomain/zero/1.0/
+
+image-x-generic.png (icon_image.png)
+========
+Icon by and copyright the GNOME Project (https://www.gnome.org/). Licensed
+under CC BY-SA 3.0 avaliable at https://creativecommons.org/licenses/by-sa/3.0/

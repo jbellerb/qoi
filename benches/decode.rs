@@ -16,27 +16,23 @@ const IMAGES: &[&str] = &[
     "icon_image.qoi",
 ];
 
-fn bench_all(c: &mut Criterion) {
+fn bench_decode(c: &mut Criterion) {
     for file in IMAGES {
+        let mut group = c.benchmark_group("decode");
+
         let data = read(format!("tests/images/qoi/{}", file)).unwrap();
-        bench_image(c, data, file);
+        let decoder = Decoder::new(data.as_slice()).unwrap();
+        let mut buf = vec![0; decoder.output_buffer_size()];
+        group.throughput(Throughput::Bytes(decoder.output_buffer_size() as u64));
+
+        group.bench_with_input(*file, &data, |b, data| {
+            b.iter(|| {
+                let mut decoder = Decoder::new(data.as_slice()).unwrap();
+                decoder.read_image(&mut buf).unwrap();
+            })
+        });
     }
 }
 
-fn bench_image(c: &mut Criterion, data: Vec<u8>, name: &str) {
-    let mut group = c.benchmark_group("decode");
-
-    let decoder = Decoder::new(data.as_slice()).unwrap();
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    group.throughput(Throughput::Bytes(decoder.output_buffer_size() as u64));
-
-    group.bench_with_input(name, &data, |b, data| {
-        b.iter(|| {
-            let mut decoder = Decoder::new(data.as_slice()).unwrap();
-            decoder.read_image(&mut buf).unwrap();
-        })
-    });
-}
-
-criterion_group!(benches, bench_all);
+criterion_group!(benches, bench_decode);
 criterion_main!(benches);

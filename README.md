@@ -1,6 +1,6 @@
 # qoi
 
-Rough implementation of Dominic Szablewski's [Quite OK Image Format](https://github.com/phoboslab/qoi) (2021-12-16 draft). Currently lacking support for images without alpha channels.
+Rough implementation of Dominic Szablewski's [Quite OK Image Format](https://github.com/phoboslab/qoi) (2021-12-16 draft).
 
 <br />
 

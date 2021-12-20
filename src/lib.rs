@@ -1,10 +1,10 @@
-pub mod info;
-
 mod decoder;
 mod encoder;
+mod info;
 
 pub use crate::decoder::Decoder;
 pub use crate::encoder::Encoder;
+pub use crate::info::{Channels, Colorspace, Info};
 
 use rgb::RGBA;
 

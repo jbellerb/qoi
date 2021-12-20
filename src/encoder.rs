@@ -1,8 +1,6 @@
-use std::convert::TryInto;
 use std::io::Write;
 
-use crate::info::Info;
-use crate::qoi_hash;
+use crate::{qoi_hash, Channels, Info};
 
 use anyhow::{anyhow, Result};
 use byteorder::WriteBytesExt;
@@ -18,20 +16,20 @@ pub struct Encoder<W: Write> {
 }
 
 impl<W: Write> Encoder<W> {
-    pub fn new(w: W, width: u32, height: u32) -> Result<Encoder<W>> {
-        if width == 0 {
+    pub fn new(w: W, info: Info) -> Result<Self> {
+        if info.width == 0 {
             return Err(anyhow!("zero width"));
         }
 
-        if height == 0 {
+        if info.height == 0 {
             return Err(anyhow!("zero height"));
         }
 
         Encoder {
             w,
-            info: Info::with_size(width, height),
+            info,
             index: [RGBA::default(); 64],
-            prev: RGBA::default(),
+            prev: RGBA::new(0, 0, 0, 255),
             run: 0,
         }
         .write_header()
@@ -45,10 +43,13 @@ impl<W: Write> Encoder<W> {
     }
 
     pub fn write_image_data(&mut self, data: &[u8]) -> Result<()> {
-        let mut pixels = data.chunks_exact(4).peekable();
+        let mut pixels = data.chunks_exact(self.info.channels as usize).peekable();
 
         while let Some(pixel) = pixels.next() {
-            let pixel = TryInto::<[u8; 4]>::try_into(pixel)?.into();
+            let pixel = match self.info.channels {
+                Channels::Rgb => RGBA::new(pixel[0], pixel[1], pixel[2], 255),
+                Channels::Rgba => RGBA::new(pixel[0], pixel[1], pixel[2], pixel[3]),
+            };
 
             if pixel == self.prev {
                 self.run += 1;

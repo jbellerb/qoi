@@ -1,7 +1,6 @@
 use std::io::Read;
 
-use crate::info::Info;
-use crate::qoi_hash;
+use crate::{qoi_hash, Channels, Info};
 
 use anyhow::{ensure, Result};
 use byteorder::ReadBytesExt;
@@ -18,7 +17,7 @@ pub struct Decoder<R: Read> {
 }
 
 impl<R: Read> Decoder<R> {
-    pub fn new(mut r: R) -> Result<Decoder<R>> {
+    pub fn new(mut r: R) -> Result<Self> {
         let mut magic_bytes = [0; 4];
         r.read_exact(&mut magic_bytes)?;
         ensure!(magic_bytes == crate::QOI_MAGIC, "magic number mismatch");
@@ -30,7 +29,7 @@ impl<R: Read> Decoder<R> {
             info,
             pixel: 0,
             index: [RGBA::default(); 64],
-            prev: RGBA::default(),
+            prev: RGBA::new(0, 0, 0, 255),
         })
     }
 
@@ -39,15 +38,15 @@ impl<R: Read> Decoder<R> {
     }
 
     pub fn output_buffer_size(&self) -> usize {
-        let (width, height) = self.info().size();
+        let (width, height) = self.info.dimensions();
 
-        (width * height * 4) as usize
+        (width * height) as usize * self.info.channels as usize
     }
 
     pub fn read_image(&mut self, mut buf: &mut [u8]) -> Result<()> {
         ensure!(buf.len() >= self.output_buffer_size(), "buf too small");
 
-        let size = self.output_buffer_size() / 4;
+        let size = self.output_buffer_size() / self.info.channels as usize;
 
         while self.pixel < size {
             let mut pixel = self.prev;
@@ -92,7 +91,10 @@ impl<R: Read> Decoder<R> {
                         ensure!(self.pixel + (run as usize) < size, "overrun");
 
                         for _ in 0..run {
-                            buf.put(pixel.as_slice());
+                            match self.info.channels {
+                                Channels::Rgb => buf.put(pixel.rgb_mut().as_slice()),
+                                Channels::Rgba => buf.put(pixel.as_slice()),
+                            };
                         }
                         self.pixel += run as usize;
                     }
@@ -102,7 +104,10 @@ impl<R: Read> Decoder<R> {
 
             self.index[qoi_hash(pixel)] = pixel;
 
-            buf.put(pixel.as_slice());
+            match self.info.channels {
+                Channels::Rgb => buf.put(pixel.rgb_mut().as_slice()),
+                Channels::Rgba => buf.put(pixel.as_slice()),
+            };
             self.prev = pixel;
             self.pixel += 1;
         }

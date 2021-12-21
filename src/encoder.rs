@@ -1,8 +1,7 @@
 use std::io::Write;
 
-use crate::{qoi_hash, Channels, Info};
+use crate::{qoi_hash, Channels, EncodeError, Info};
 
-use anyhow::{anyhow, Result};
 use byteorder::WriteBytesExt;
 use rgb::{ComponentSlice, RGBA};
 
@@ -16,13 +15,13 @@ pub struct Encoder<W: Write> {
 }
 
 impl<W: Write> Encoder<W> {
-    pub fn new(w: W, info: Info) -> Result<Self> {
+    pub fn new(w: W, info: Info) -> Result<Self, EncodeError> {
         if info.width == 0 {
-            return Err(anyhow!("zero width"));
+            return Err(EncodeError::ZeroWidth);
         }
 
         if info.height == 0 {
-            return Err(anyhow!("zero height"));
+            return Err(EncodeError::ZeroHeight);
         }
 
         Encoder {
@@ -35,14 +34,14 @@ impl<W: Write> Encoder<W> {
         .write_header()
     }
 
-    pub fn write_header(mut self) -> Result<Self> {
+    pub fn write_header(mut self) -> Result<Self, EncodeError> {
         self.w.write_all(&crate::QOI_MAGIC)?;
         self.info.encode(&mut self.w)?;
 
         Ok(self)
     }
 
-    pub fn write_image_data(&mut self, data: &[u8]) -> Result<()> {
+    pub fn write_image_data(&mut self, data: &[u8]) -> Result<(), EncodeError> {
         let mut pixels = data.chunks_exact(self.info.channels as usize).peekable();
 
         while let Some(pixel) = pixels.next() {

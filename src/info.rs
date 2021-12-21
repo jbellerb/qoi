@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 
-use anyhow::{anyhow, Error, Result};
+use crate::{DecodeError, EncodeError};
+
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 #[repr(u8)]
@@ -11,13 +12,13 @@ pub enum Channels {
 }
 
 impl TryFrom<u8> for Channels {
-    type Error = Error;
+    type Error = DecodeError;
 
-    fn try_from(v: u8) -> Result<Self> {
+    fn try_from(v: u8) -> Result<Self, DecodeError> {
         match v {
             3 => Ok(Channels::Rgb),
             4 => Ok(Channels::Rgba),
-            _ => Err(anyhow!("invalid number of channels")),
+            _ => Err(DecodeError::InvalidChannels(v)),
         }
     }
 }
@@ -30,13 +31,13 @@ pub enum Colorspace {
 }
 
 impl TryFrom<u8> for Colorspace {
-    type Error = Error;
+    type Error = DecodeError;
 
-    fn try_from(v: u8) -> Result<Self> {
+    fn try_from(v: u8) -> Result<Self, DecodeError> {
         match v {
             0 => Ok(Colorspace::Srgb),
             1 => Ok(Colorspace::Linear),
-            _ => Err(anyhow!("invalid colorspace")),
+            _ => Err(DecodeError::InvalidColorspace),
         }
     }
 }
@@ -71,7 +72,7 @@ impl Info {
         self.colorspace
     }
 
-    pub fn encode<W: Write>(&self, mut w: W) -> Result<()> {
+    pub fn encode<W: Write>(&self, mut w: W) -> Result<(), EncodeError> {
         w.write_u32::<BigEndian>(self.width)?;
         w.write_u32::<BigEndian>(self.height)?;
         w.write_u8(self.channels as u8)?;
@@ -80,7 +81,7 @@ impl Info {
         Ok(())
     }
 
-    pub fn decode<R: Read>(mut r: R) -> Result<Self> {
+    pub fn decode<R: Read>(mut r: R) -> Result<Self, DecodeError> {
         Ok(Info {
             width: r.read_u32::<BigEndian>()?,
             height: r.read_u32::<BigEndian>()?,

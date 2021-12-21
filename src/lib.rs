@@ -6,7 +6,10 @@ pub use crate::decoder::Decoder;
 pub use crate::encoder::Encoder;
 pub use crate::info::{Channels, Colorspace, Info};
 
+use std::io::Error;
+
 use rgb::RGBA;
+use thiserror::Error;
 
 const QOI_MAGIC: [u8; 4] = [113, 111, 105, 102];
 const QOI_PADDING: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
@@ -26,4 +29,30 @@ fn qoi_hash(pixel: RGBA<u8>) -> usize {
     let a = pixel.a as usize;
 
     (r * 3 + g * 5 + b * 7 + a * 11) % 64
+}
+
+#[derive(Error, Debug)]
+pub enum DecodeError {
+    #[error("Invalid number of channels: {0}")]
+    InvalidChannels(u8),
+    #[error("Invalid colorspace")]
+    InvalidColorspace,
+    #[error("Invalid QOI signature")]
+    InvalidSignature,
+    #[error("Decode buffer too small, expected {expected} got {actual}")]
+    BufferSize { expected: usize, actual: usize },
+    #[error("Image contains out-of-bounds pixels")]
+    OutOfBounds,
+    #[error(transparent)]
+    IoError(#[from] Error),
+}
+
+#[derive(Error, Debug)]
+pub enum EncodeError {
+    #[error("Image has zero width")]
+    ZeroWidth,
+    #[error("Image has zero height")]
+    ZeroHeight,
+    #[error(transparent)]
+    IoError(#[from] Error),
 }

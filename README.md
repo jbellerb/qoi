@@ -1,6 +1,14 @@
 # qoi
 
-Rough implementation of Dominic Szablewski's [Quite OK Image Format](https://github.com/phoboslab/qoi) (2021-12-16 draft).
+Rough implementation of Dominic Szablewski's [Quite OK Image Format](https://github.com/phoboslab/qoi) (v1.0).
+
+## TODO
+
+- [x] Probably spec compliant encode and decode
+- [x] Basic error reporting
+- [ ] Proper unit tests
+- [ ] Validate padding and prevent writing invalid sequences
+- [ ] Optimize decoding performance
 
 <br />
 

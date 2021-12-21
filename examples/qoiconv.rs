@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use qoi::{Channels, Colorspace, Decoder, Encoder, Info};
 
+use anyhow::{bail, Result};
 use clap::Parser;
 use image::{DynamicImage, ImageBuffer, Pixel, RgbImage, RgbaImage};
 
@@ -26,12 +27,12 @@ enum QoiImage {
     ImageRgba(RgbaImage),
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
     let img = match args.infile.extension().and_then(OsStr::to_str) {
         Some("png") => {
-            let img = image::open(args.infile).unwrap();
+            let img = image::open(args.infile)?;
 
             match img {
                 DynamicImage::ImageLuma8(..)
@@ -47,12 +48,12 @@ fn main() {
             }
         }
         Some("qoi") => {
-            let file = File::open(args.infile).unwrap();
-            let mut decoder = Decoder::new(BufReader::new(file)).unwrap();
+            let file = File::open(args.infile)?;
+            let mut decoder = Decoder::new(BufReader::new(file))?;
 
             let (width, height) = decoder.info().dimensions();
             let mut buf = vec![0; decoder.output_buffer_size()];
-            decoder.read_image(&mut buf).unwrap();
+            decoder.read_image(&mut buf)?;
 
             match decoder.info().channels() {
                 Channels::Rgb => {
@@ -63,32 +64,36 @@ fn main() {
                 }
             }
         }
-        _ => panic!("Input file must be .png or .qoi"),
+        _ => bail!("Input file must be .png or .qoi"),
     };
 
     match args.outfile.extension().and_then(OsStr::to_str) {
         Some("png") => match img {
-            QoiImage::ImageRgb(img) => img.save(args.outfile).unwrap(),
-            QoiImage::ImageRgba(img) => img.save(args.outfile).unwrap(),
+            QoiImage::ImageRgb(img) => img.save(args.outfile)?,
+            QoiImage::ImageRgba(img) => img.save(args.outfile)?,
         },
         Some("qoi") => {
-            let file = File::create(args.outfile).unwrap();
+            let file = File::create(args.outfile)?;
 
             match img {
-                QoiImage::ImageRgb(img) => save_qoi(img, file, Channels::Rgb),
-                QoiImage::ImageRgba(img) => save_qoi(img, file, Channels::Rgba),
+                QoiImage::ImageRgb(img) => save_qoi(img, file, Channels::Rgb)?,
+                QoiImage::ImageRgba(img) => save_qoi(img, file, Channels::Rgba)?,
             }
         }
-        _ => panic!("Output file must be .png or .qoi"),
+        _ => bail!("Output file must be .png or .qoi"),
     };
+
+    Ok(())
 }
 
-fn save_qoi<P>(img: ImageBuffer<P, Vec<u8>>, file: File, channels: Channels)
+fn save_qoi<P>(img: ImageBuffer<P, Vec<u8>>, file: File, channels: Channels) -> Result<()>
 where
     P: Pixel<Subpixel = u8> + 'static,
 {
     let (width, height) = img.dimensions();
     let info = Info::new(width, height, channels, Colorspace::Srgb);
-    let mut encoder = Encoder::new(BufWriter::new(file), info).unwrap();
-    encoder.write_image_data(img.as_raw()).unwrap();
+    let mut encoder = Encoder::new(BufWriter::new(file), info)?;
+    encoder.write_image_data(img.as_raw())?;
+
+    Ok(())
 }

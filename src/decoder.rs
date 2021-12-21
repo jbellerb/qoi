@@ -1,8 +1,7 @@
 use std::io::Read;
 
-use crate::{qoi_hash, Channels, Info};
+use crate::{qoi_hash, Channels, DecodeError, Info};
 
-use anyhow::{ensure, Result};
 use byteorder::ReadBytesExt;
 use bytes::BufMut;
 use rgb::{ComponentSlice, RGBA};
@@ -17,10 +16,12 @@ pub struct Decoder<R: Read> {
 }
 
 impl<R: Read> Decoder<R> {
-    pub fn new(mut r: R) -> Result<Self> {
+    pub fn new(mut r: R) -> Result<Self, DecodeError> {
         let mut magic_bytes = [0; 4];
         r.read_exact(&mut magic_bytes)?;
-        ensure!(magic_bytes == crate::QOI_MAGIC, "magic number mismatch");
+        if magic_bytes != crate::QOI_MAGIC {
+            return Err(DecodeError::InvalidSignature);
+        }
 
         let info = Info::decode(&mut r)?;
 
@@ -43,8 +44,13 @@ impl<R: Read> Decoder<R> {
         (width * height) as usize * self.info.channels as usize
     }
 
-    pub fn read_image(&mut self, mut buf: &mut [u8]) -> Result<()> {
-        ensure!(buf.len() >= self.output_buffer_size(), "buf too small");
+    pub fn read_image(&mut self, mut buf: &mut [u8]) -> Result<(), DecodeError> {
+        if buf.len() < self.output_buffer_size() {
+            return Err(DecodeError::BufferSize {
+                expected: self.output_buffer_size(),
+                actual: buf.len(),
+            });
+        }
 
         let size = self.output_buffer_size() / self.info.channels as usize;
 
@@ -88,7 +94,9 @@ impl<R: Read> Decoder<R> {
                     }
                     crate::QOI_OP_RUN => {
                         let run = byte & 0x3f;
-                        ensure!(self.pixel + (run as usize) < size, "overrun");
+                        if self.pixel + (run as usize) >= size {
+                            return Err(DecodeError::OutOfBounds);
+                        }
 
                         for _ in 0..run {
                             match self.info.channels {
